@@ -5,6 +5,9 @@
 
 #include "FGAStar.h"
 
+UFGNode::UFGNode(){
+
+}
 void UFGNode::SetSize( float Size ){
 	NodeHalfSize = Size * 0.5f;
 }
@@ -36,4 +39,7 @@ float UFGNode::CalculateG( UFGNode* StartNode ){
 	GCost = G;
 	//this->GCost = IAStar::GetDistance(this, StartNode);
 	return GCost;
+}
+UFGNode::~UFGNode(){
+	Neighbours.Reset();
 }

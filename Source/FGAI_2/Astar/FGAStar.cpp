@@ -19,7 +19,10 @@ TArray<UFGNode*> IFGAStar::GetPath( AFGGridActor* Grid, FVector Start, FVector E
 
 	UFGNode* StartNode = GetNodeFromWorldLoc(Start, NodeGrid);
 	UFGNode* EndNode = GetNodeFromWorldLoc(End, NodeGrid);
-
+	if ( StartNode == nullptr || EndNode == nullptr ){
+		return TArray<UFGNode*>();
+	}
+	
 	UFGNode* CurrentNode = StartNode;
 
 	Open.Add(CurrentNode);
@@ -49,12 +52,12 @@ TArray<UFGNode*> IFGAStar::GetPath( AFGGridActor* Grid, FVector Start, FVector E
 				Neighbour->Parent = CurrentNode;
 			}
 		}
-		
+
 		Open.RemoveSingle(CurrentNode);
 		Closed.Add(CurrentNode);
 		if ( Open.Num() > 0 ){
-			
-			Algo::Sort(Open);
+			Open.Sort();
+			//Algo::Sort(Open);
 			CurrentNode = Open[0];
 		}
 	}
@@ -72,13 +75,18 @@ TArray<UFGNode*> IFGAStar::GetPath( AFGGridActor* Grid, FVector Start, FVector E
 			UKismetSystemLibrary::DrawDebugSphere(Grid, PathNode->WorldLocation, 100.f, 12, FColor::Purple, DebugTime, 10.f);
 
 		}
+		Open.Reset();
+		Closed.Reset();
+		NodeGrid.Reset();
 		return Path;
 
 	}
 	//TODO DEBUG-REMOVE
 	UE_LOG(LogTemp, Log, TEXT("COULD NOT FIND PATH"));
-	return
-	TArray<UFGNode*>();
+	Open.Reset();
+	Closed.Reset();
+	NodeGrid.Reset();
+	return TArray<UFGNode*>();
 }
 TArray<UFGNode*> IFGAStar::RetracePath( UFGNode* StartNode, UFGNode* EndNode ){
 	TArray<UFGNode*> Path;
@@ -107,8 +115,8 @@ int IFGAStar::GetDistance( const UFGNode* A, const UFGNode* B ){
 		+ (y - destY) * (y - destY));
 }
 void IFGAStar::InitNodeGrid( AFGGridActor* Grid, TMap<FIntPoint, UFGNode*>& NodeGrid ){
-	for ( int x = 0; x < Grid->Width; ++x ){
-		for ( int y = 0; y < Grid->Height; ++y ){
+	for ( int x = Grid->Width - 1; x >= 0; --x ){
+		for ( int y = Grid->Height - 1; y >= 0; --y ){
 			int index = Grid->GetTileIndexFromXY(x, y);
 			UFGNode* Node = NewObject<UFGNode>();
 			Node->InitNode(x, y);

@@ -2,6 +2,8 @@
 
 #pragma once
 
+
+
 #include "CoreMinimal.h"
 #include "UObject/Object.h"
 #include "FGNode.generated.h"
@@ -14,7 +16,8 @@ class FGAI_2_API UFGNode : public UObject {
 	friend class IAStar;
 	GENERATED_BODY()
 public:
-	UFGNode() = default;
+	UFGNode();
+	
 
 	float NodeHalfSize = 250;
 	int HCost;
@@ -48,6 +51,7 @@ public:
 
 	float CalculateH( UFGNode* EndNode );
 	float CalculateG( UFGNode* StartNode );
+	~UFGNode() override;
 };
 inline bool operator <( const UFGNode& lhs, const UFGNode& rhs ){
 	if ( lhs.GetFCost() == rhs.GetFCost() ){
