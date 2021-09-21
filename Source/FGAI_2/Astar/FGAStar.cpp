@@ -124,6 +124,7 @@ void IFGAStar::InitNodeGrid( AFGGridActor* Grid, TMap<FIntPoint, UFGNode*>& Node
 			Node->bIsBlocked = Grid->TileList[index].bBlock;
 			Node->WorldLocation = Grid->GetWorldLocationFromXY(x, y);
 			NodeGrid.Add(FIntPoint(x, y), Node);
+			//TODO Remove Debug stuff;
 			FString string = FString("X:");
 			string.AppendInt(x);
 			string.Append(" Y:").AppendInt(y);
