@@ -51,7 +51,12 @@ public:
 
 	float CalculateH( UFGNode* EndNode );
 	float CalculateG( UFGNode* StartNode );
-	~UFGNode() override;
+	bool operator <(  UFGNode& rhs )const{
+		if ( GetFCost() == rhs.GetFCost() ){
+			return GetHCost() < rhs.GetHCost();
+		}
+		return GetFCost() < rhs.GetFCost();
+	}
 };
 inline bool operator <( const UFGNode& lhs, const UFGNode& rhs ){
 	if ( lhs.GetFCost() == rhs.GetFCost() ){

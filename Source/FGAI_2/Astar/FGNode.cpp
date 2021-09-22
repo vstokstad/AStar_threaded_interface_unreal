@@ -40,6 +40,4 @@ float UFGNode::CalculateG( UFGNode* StartNode ){
 	//this->GCost = IAStar::GetDistance(this, StartNode);
 	return GCost;
 }
-UFGNode::~UFGNode(){
-	Neighbours.Reset();
-}
+

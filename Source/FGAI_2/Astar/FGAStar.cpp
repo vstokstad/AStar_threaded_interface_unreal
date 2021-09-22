@@ -6,7 +6,7 @@
 #include "Kismet/KismetSystemLibrary.h"
 
 
-// Add default functionality here for any IAstar functions that are not pure virtual.
+
 TArray<UFGNode*> IFGAStar::FindPath_Implementation( AFGGridActor* Grid, FVector Start, FVector End ){
 	return GetPath(Grid, Start, End);
 }
@@ -22,29 +22,28 @@ TArray<UFGNode*> IFGAStar::GetPath( AFGGridActor* Grid, FVector Start, FVector E
 	if ( StartNode == nullptr || EndNode == nullptr ){
 		return TArray<UFGNode*>();
 	}
-	
+
 	UFGNode* CurrentNode = StartNode;
 
 	Open.Add(CurrentNode);
 	bool bSuccess = false;
-
+	CurrentNode->HCost = GetDistance(CurrentNode, EndNode);
 	while ( Open.Num() > 0 ){
 		if ( CurrentNode == EndNode ){
 			bSuccess = true;
 			break;
 		}
-		CurrentNode->GCost = GetDistance(CurrentNode, StartNode);
-		CurrentNode->HCost = GetDistance(CurrentNode, EndNode);
+
 		TArray<UFGNode*> Neighbours = GetNeighbours(CurrentNode, NodeGrid, Grid->Height, Grid->Width, Closed);
+		UE_LOG(LogTemp, Log, TEXT("NumberOfNeighbours: %i"), Neighbours.Num())
 		for ( auto& Neighbour : Neighbours ){
 			if ( Neighbour == nullptr || Neighbour->bIsBlocked || Closed.Contains(Neighbour) ){
 				continue;
 			}
-
-			//int newMoveCost = CurrentNode->GCost + GetDistance(CurrentNode, StartNode);
-
+			int NewGCost = CurrentNode->GCost + GetDistance(CurrentNode, Neighbour);
 			if ( !Open.Contains(Neighbour) ){
-				Neighbour->GCost = GetDistance(Neighbour, StartNode);
+
+				Neighbour->GCost = NewGCost;
 				Neighbour->HCost = GetDistance(Neighbour, EndNode);
 				Open.Add(Neighbour);
 			}
@@ -70,8 +69,8 @@ TArray<UFGNode*> IFGAStar::GetPath( AFGGridActor* Grid, FVector Start, FVector E
 		//TODO Remove Debug
 		UE_LOG(LogTemp, Log, TEXT("CurrentNode is EndNode"))
 		for ( auto& PathNode : Path ){
-			float DebugTime = 5.f;
-			//UKismetSystemLibrary::DrawDebugArrow(Grid, PathNode->WorldLocation, PathNode->Parent->WorldLocation, 5.f, FColor::Purple, DebugTime, 10.f);
+			float DebugTime = 2.f;
+			UKismetSystemLibrary::DrawDebugArrow(Grid, PathNode->WorldLocation, PathNode->Parent->WorldLocation, 5.f, FColor::Purple, DebugTime, 10.f);
 			UKismetSystemLibrary::DrawDebugSphere(Grid, PathNode->WorldLocation, 100.f, 12, FColor::Purple, DebugTime, 10.f);
 
 		}
@@ -97,22 +96,17 @@ TArray<UFGNode*> IFGAStar::RetracePath( UFGNode* StartNode, UFGNode* EndNode ){
 		CurrentNode = CurrentNode->Parent;
 
 	}
-	Algo::Reverse(Path);
+	//	Algo::Reverse(Path);
 	return Path;
 }
 int IFGAStar::GetDistance( const UFGNode* A, const UFGNode* B ){
-	// int distX = FMath::Abs(A->X - B->X);
-	// int distY = FMath::Abs(A->Y - B->Y);
-	// if ( distX > distY ){
-	// 	return 14 * distY + 10 * (distX - distY);
-	// }
-	// return 14 * distX + 10 * (distY - distX);
-	int x = A->WorldLocation.X;
-	int y = A->WorldLocation.Y;
-	int destX = B->WorldLocation.X;
-	int destY = B->WorldLocation.Y;
-	return sqrt((x - destX) * (x - destX)
-		+ (y - destY) * (y - destY));
+	int distX = FMath::Abs(A->WorldLocation.X - B->WorldLocation.X);
+	int distY = FMath::Abs(A->WorldLocation.Y - B->WorldLocation.Y);
+	if ( distX > distY ){
+		return FMath::Abs(14 * distY + 10 * (distX - distY));
+	}
+	return FMath::Abs(14 * distX + 10 * (distY - distX));
+
 }
 void IFGAStar::InitNodeGrid( AFGGridActor* Grid, TMap<FIntPoint, UFGNode*>& NodeGrid ){
 	for ( int x = Grid->Width - 1; x >= 0; --x ){
@@ -128,14 +122,13 @@ void IFGAStar::InitNodeGrid( AFGGridActor* Grid, TMap<FIntPoint, UFGNode*>& Node
 			FString string = FString("X:");
 			string.AppendInt(x);
 			string.Append(" Y:").AppendInt(y);
-			UKismetSystemLibrary::DrawDebugString(Grid, Node->WorldLocation, string, 0, FLinearColor::Black, 5.f);
+			UKismetSystemLibrary::DrawDebugString(Grid, Node->WorldLocation, string, 0, FLinearColor::Black, 1.f);
 		}
 	}
 }
 TArray<UFGNode*> IFGAStar::GetNeighbours( UFGNode* Node, const TMap<FIntPoint, UFGNode*>& NodeGrid, int Height, int Width, const TArray<UFGNode*>& ClosedList ){
-	TArray<UFGNode*> N;
-	for ( int x = -1; x <= 1; ++x ){
-		for ( int y = -1; y < 1; ++y ){
+	for ( int x = -1; x <= 1; x++ ){
+		for ( int y = -1; y < 1; y++ ){
 			if ( x == 0 && y == 0 ){
 				continue;
 			}
@@ -146,11 +139,10 @@ TArray<UFGNode*> IFGAStar::GetNeighbours( UFGNode* Node, const TMap<FIntPoint, U
 				if ( ClosedList.Contains(Neighbour) )
 					continue;
 				Neighbour->Parent = Node;
-				N.Add(Neighbour);
+				Node->Neighbours.Add(Neighbour);
 			}
 		}
 	}
-	Node->Neighbours = N;
 	return Node->Neighbours;
 }
 UFGNode* IFGAStar::GetNodeFromWorldLoc( const FVector& Location, const TMap<FIntPoint, UFGNode*>& NodeGrid ){

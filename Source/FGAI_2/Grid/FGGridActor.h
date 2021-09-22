@@ -10,7 +10,8 @@ struct FFGTileinfo {
 public:
 	UPROPERTY(BlueprintReadWrite, Category = "Tile")
 	bool bBlock = false;
-
+	UPROPERTY(BlueprintReadWrite, Category="Tile")
+	int X = 0, Y = 0;
 
 };
 
@@ -25,7 +26,7 @@ public:
 	AFGGridActor();
 
 	virtual void BeginPlay() override;
-
+	virtual void Tick( float DeltaSeconds ) override;
 	/*
 	* Called whenever placed in the editor or world, having its transform changed etc.
 	* Responsible for eventually calling the infamous ConstructionScript in blueprint.
@@ -74,7 +75,7 @@ public:
 	void GenerateGrid();
 
 	bool IsWorldLocationInsideGrid( const FVector& WorldLocation ) const;
-	
+
 	UFUNCTION(BlueprintPure, Category = "Grid")
 	int32 GetTileIndexFromXY( int32 TileX, int32 TileY ) const;
 	bool IsTileIndexValid( int32 TileIndex ) const;

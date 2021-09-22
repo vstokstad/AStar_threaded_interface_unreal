@@ -17,10 +17,15 @@ AFGGridActor::AFGGridActor(){
 	BlockStaticMeshComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("BlockStaticMeshComponent"));
 	BlockStaticMeshComponent->SetupAttachment(RootComponent);
 	BlockStaticMeshComponent->SetCastShadow(false);
+	PrimaryActorTick.bCanEverTick = true;
 }
 
 void AFGGridActor::BeginPlay(){
 	Super::BeginPlay();
+}
+void AFGGridActor::Tick( float DeltaSeconds ){
+	Super::Tick(DeltaSeconds);
+
 }
 
 void AFGGridActor::OnConstruction( const FTransform& Transform ){
@@ -32,7 +37,7 @@ void AFGGridActor::OnConstruction( const FTransform& Transform ){
 		*/
 
 		TileList.SetNum(GetNumTiles());
-		
+
 	}
 	GenerateGrid();
 	DrawBlocks();
@@ -132,7 +137,7 @@ void AFGGridActor::DrawBlocks(){
 			const FVector TileRelativeLocation = GetActorTransform().InverseTransformPositionNoScale(GetWorldLocationFromXY(X, Y));
 			const int32 ArrayIndex = GetTileIndexFromXY(X, Y);
 			const bool bIsBlocked = TileList[ArrayIndex].bBlock;
-
+			
 			if ( bIsBlocked ){
 				BlockMeshDescription->CreateCube(TileRelativeLocation, BlockExtent, BlockPGID, PID, PID, PID, PID, PID, PID);
 			}
@@ -153,7 +158,7 @@ void AFGGridActor::UpdateBlockingTiles(){
 
 	TileList.Empty();
 	TileList.SetNum(GetNumTiles());
-	
+
 	TArray<int32> BlockIndices;
 
 	for ( const auto Block : AllBlocks ){
@@ -165,6 +170,7 @@ void AFGGridActor::UpdateBlockingTiles(){
 
 		for ( int32 Index = 0, Num = BlockIndices.Num(); Index < Num; ++Index ){
 			TileList[BlockIndices[Index]].bBlock = true;
+
 		}
 	}
 
@@ -202,7 +208,7 @@ void AFGGridActor::GenerateGrid(){
 		FVector Center = FVector(0.0f, Location_Y + LocationOffset, BorderSize);
 		FVector Test = FVector(GetWidthSize(), BorderSize, BorderSize);
 		MeshDescription->CreateCube(Center, GetHeightExtends(), PGID, PID, PID, PID, PID, PID, PID);
-		
+
 	}
 
 	TArray<UStaticMeshDescription*> MeshDescriptionList;
