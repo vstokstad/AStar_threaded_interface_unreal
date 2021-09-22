@@ -30,11 +30,6 @@ void AFGPlayer::Tick( float DeltaSeconds ){
 
 
 	UpdateMovement(DeltaSeconds);
-	// if ( !bIsSecondClick ){
-	// 	bIsSecondClick = true;
-	// 	GetMouseLocationOnGrid(SecondClickLoc);
-	// 	Execute_FindPath(this, CurrentGridActor, FirstClickLoc, SecondClickLoc);
-	// }
 
 
 }
