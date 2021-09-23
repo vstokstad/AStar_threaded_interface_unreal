@@ -109,17 +109,7 @@ TArray<UFGNode*> IFGAStar::GetPath( AFGGridActor* Grid, FVector Start, FVector E
 	}
 	return TArray<UFGNode*>();
 }
-TArray<UFGNode*> IFGAStar::RetracePath( UFGNode* StartNode, UFGNode* EndNode ){
-	TArray<UFGNode*> Path;
-	UFGNode* CurrentNode = EndNode;
-	while ( CurrentNode != StartNode ){
-		Path.Add(CurrentNode);
-		ensure(CurrentNode->Parent!=nullptr);
-		CurrentNode = CurrentNode->Parent;
-	}
-	Algo::Reverse(Path);
-	return Path;
-}
+
 int IFGAStar::GetDistance( const UFGNode* A, const UFGNode* B ){
 	int distX = FMath::Abs(A->X - B->X);
 	int distY = FMath::Abs(A->Y - B->Y);
@@ -191,4 +181,15 @@ UFGNode* IFGAStar::GetNodeFromWorldLoc( const FVector& Location, const TMap<FInt
 	}
 	UE_LOG(LogTemp, Log, TEXT("LOCATION HAS NO MATCHIN NODE"));
 	return nullptr;
+}
+TArray<UFGNode*> IFGAStar::RetracePath( UFGNode* StartNode, UFGNode* EndNode ){
+	TArray<UFGNode*> Path;
+	UFGNode* CurrentNode = EndNode;
+	while ( CurrentNode != StartNode ){
+		Path.Add(CurrentNode);
+		ensure(CurrentNode->Parent!=nullptr);
+		CurrentNode = CurrentNode->Parent;
+	}
+	Algo::Reverse(Path);
+	return Path;
 }

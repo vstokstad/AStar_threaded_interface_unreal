@@ -34,11 +34,7 @@ public:
 	}
 	int X, Y;
 	FVector WorldLocation;
-	FColor Color;
-	FColor GetColor(){
-		Color = bIsBlocked ? FColor::Red : FColor::Emerald;
-		return Color;
-	}
+	
 	UPROPERTY()
 	UFGNode* Parent;
 	UPROPERTY()
@@ -51,6 +47,7 @@ public:
 
 	float CalculateH( UFGNode* EndNode );
 	float CalculateG( UFGNode* StartNode );
+	
 	bool operator <(  UFGNode& rhs )const{
 		if ( GetFCost() == rhs.GetFCost() ){
 			return GetHCost() < rhs.GetHCost();
