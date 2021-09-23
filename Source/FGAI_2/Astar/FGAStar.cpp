@@ -37,7 +37,6 @@ TArray<UFGNode*> IFGAStar::GetPath( AFGGridActor* Grid, FVector Start, FVector E
 		}
 
 		TArray<UFGNode*> Neighbours = GetNeighbours(CurrentNode, NodeGrid, Grid->Height, Grid->Width, Closed);
-		UE_LOG(LogTemp, Log, TEXT("NumberOfNeighbours: %i"), Neighbours.Num())
 		for ( auto& Neighbour : Neighbours ){
 			if ( Neighbour == nullptr || Closed.Contains(Neighbour) || Neighbour->bIsBlocked ){
 				continue;
@@ -45,7 +44,7 @@ TArray<UFGNode*> IFGAStar::GetPath( AFGGridActor* Grid, FVector Start, FVector E
 
 			int NewGCost = CurrentNode->GCost + GetDistance(CurrentNode, Neighbour);
 
-			if ( !Open.Contains(Neighbour) || NewGCost < Neighbour->GCost ){
+			if ( !Open.Contains(Neighbour) ){
 
 				Neighbour->GCost = NewGCost;
 				Neighbour->HCost = GetDistance(Neighbour, EndNode);
@@ -53,9 +52,8 @@ TArray<UFGNode*> IFGAStar::GetPath( AFGGridActor* Grid, FVector Start, FVector E
 				Open.Add(Neighbour);
 			}
 			else{
-
-				Neighbour->Parent = CurrentNode;
-
+				if ( Neighbour->Parent->GCost > CurrentNode->GCost )
+					Neighbour->Parent = CurrentNode;
 
 			}
 		}
@@ -64,15 +62,21 @@ TArray<UFGNode*> IFGAStar::GetPath( AFGGridActor* Grid, FVector Start, FVector E
 		Closed.Add(CurrentNode);
 		if ( Open.Num() > 0 ){
 			for ( int i = 0; i < Open.Num() - 1; ++i ){
-				if ( Open[i]->GetFCost() < Open[i + 1]->GetFCost() ){
+				if ( Open[i]->GetFCost() <= Open[i + 1]->GetFCost() ){
+					if ( Open[i]->HCost > Open[i + 1]->HCost ){
+						UFGNode* temp = Open[i];
+						Open[i] = Open[i + 1];
+						Open[i + 1] = temp;
+					}
 				}
 				else{
+
 					UFGNode* temp = Open[i];
 					Open[i] = Open[i + 1];
 					Open[i + 1] = temp;
 				}
 			}
-			//	Open.Sort();
+			//Open.Sort();
 			//Algo::Sort(Open);
 			CurrentNode = Open[0];
 		}
@@ -84,9 +88,18 @@ TArray<UFGNode*> IFGAStar::GetPath( AFGGridActor* Grid, FVector Start, FVector E
 		TArray<UFGNode*> Path = RetracePath(StartNode, EndNode);
 		ensure(Path.Num()>0);
 		//TODO Remove Debug
+		float DebugTime = 4.f;
 		UE_LOG(LogTemp, Log, TEXT("CurrentNode is EndNode"))
+		for ( auto& Node : Open ){
+			UKismetSystemLibrary::DrawDebugSphere(Grid, Node->WorldLocation, 50.f, 8, FColor::Green, DebugTime, 4.f);
+			UKismetSystemLibrary::DrawDebugString(Grid, Node->WorldLocation - FVector(0, -(Node->NodeHalfSize * 0.5f), 0), FString().FromInt(Node->GetFCost()), 0, FColor::Green, DebugTime);
+		}
+		for ( auto& Node : Closed ){
+			UKismetSystemLibrary::DrawDebugSphere(Grid, Node->WorldLocation, 50.f, 8, FColor::Orange, DebugTime, 4.f);
+			UKismetSystemLibrary::DrawDebugString(Grid, Node->WorldLocation - FVector(-(Node->NodeHalfSize * 0.5f), 0, 0), FString().FromInt(Node->GetFCost()), 0, FColor::Orange, DebugTime);
+		}
 		for ( auto& PathNode : Path ){
-			float DebugTime = 1.f;
+
 			UKismetSystemLibrary::DrawDebugArrow(Grid, PathNode->WorldLocation, PathNode->Parent->WorldLocation, 5.f, FColor::Purple, DebugTime, 5.f);
 			UKismetSystemLibrary::DrawDebugSphere(Grid, PathNode->WorldLocation, 50.f, 8, FColor::Purple, DebugTime, 4.f);
 		}
@@ -94,16 +107,6 @@ TArray<UFGNode*> IFGAStar::GetPath( AFGGridActor* Grid, FVector Start, FVector E
 		return Path;
 
 	}
-	//TODO DEBUG-REMOVE
-	float DebugTime = 1.f;
-	for ( auto& Node : Open ){
-		UKismetSystemLibrary::DrawDebugSphere(Grid, Node->WorldLocation, 50.f, 8, FColor::Green, DebugTime, 4.f);
-	}
-	for ( auto& Node : Closed ){
-		UKismetSystemLibrary::DrawDebugSphere(Grid, Node->WorldLocation, 50.f, 8, FColor::Orange, DebugTime, 4.f);
-
-	}
-	UE_LOG(LogTemp, Log, TEXT("COULD NOT FIND PATH"));
 	return TArray<UFGNode*>();
 }
 TArray<UFGNode*> IFGAStar::RetracePath( UFGNode* StartNode, UFGNode* EndNode ){
@@ -113,7 +116,6 @@ TArray<UFGNode*> IFGAStar::RetracePath( UFGNode* StartNode, UFGNode* EndNode ){
 		Path.Add(CurrentNode);
 		ensure(CurrentNode->Parent!=nullptr);
 		CurrentNode = CurrentNode->Parent;
-
 	}
 	Algo::Reverse(Path);
 	return Path;
@@ -121,11 +123,11 @@ TArray<UFGNode*> IFGAStar::RetracePath( UFGNode* StartNode, UFGNode* EndNode ){
 int IFGAStar::GetDistance( const UFGNode* A, const UFGNode* B ){
 	int distX = FMath::Abs(A->X - B->X);
 	int distY = FMath::Abs(A->Y - B->Y);
-	if ( distX > distY ){
-		return (20 * distY + 10 * (distX - distY));
-	}
-	return (20 * distX + 10 * (distY - distX));
 
+	if ( distX > distY ){
+		return (14 * distY + 10 * (distX - distY));
+	}
+	return (14 * distX + 10 * (distY - distX));
 }
 void IFGAStar::InitNodeGrid( AFGGridActor* Grid, TMap<FIntPoint, UFGNode*>& NodeGrid ){
 	for ( int x = Grid->Width - 1; x >= 0; --x ){
@@ -146,11 +148,12 @@ void IFGAStar::InitNodeGrid( AFGGridActor* Grid, TMap<FIntPoint, UFGNode*>& Node
 	}
 }
 TArray<UFGNode*> IFGAStar::GetNeighbours( UFGNode* Node, const TMap<FIntPoint, UFGNode*>& NodeGrid, int Height, int Width, const TArray<UFGNode*>& ClosedList ){
-	FIntPoint Directions[] = {{0, 1}, {0, -1}, {1, 0}, {-1, 0}, {1, 1}, {-1, -1}, {-1, 1}, {1, -1}};
+	FIntPoint Directions[] = {{0, 1}, {0, -1}, {1, 0}, {-1, 0}};
+	FIntPoint Diagonals[] = {{1, 1}, {-1, -1}, {1, -1}, {-1, 1}};
 	FIntPoint Current = {Node->X, Node->Y};
 	FIntPoint N = Current;
-	bool Found[8];
-	for ( int i = 0; i < 8; i++ ){
+	bool Found[4];
+	for ( int i = 0; i < 4; i++ ){
 		N = Current + Directions[i];
 		if ( N.X > (Width - 1) || N.X < 0 || N.Y > (Height - 1) || N.Y < 0 ){
 			continue;
@@ -162,17 +165,20 @@ TArray<UFGNode*> IFGAStar::GetNeighbours( UFGNode* Node, const TMap<FIntPoint, U
 		Node->Neighbours.Add(Neighbour);
 		Found[i] = true;
 	}
-	// for ( int i = 0; i < 4; i++ ){
-	// 	int j = (i + 1) % 4;
-	//
-	// 	N = Current + Directions[i] + Directions[j];
-	// 	UFGNode* Neighbour = NodeGrid.FindRef(N);
-	//
-	// 	if ( ClosedList.Contains(Neighbour) || Neighbour == nullptr )
-	// 		continue;
-	// 	Neighbour->Parent = Node;
-	// 	Node->Neighbours.Add(Neighbour);
-	// }
+	for ( int i = 0; i < 4; i++ ){
+		int j = (i + 1) % 4;
+		if ( Found[i] || Found[j] ){
+			N = Current + Diagonals[i];
+			if ( N.X > (Width - 1) || N.X < 0 || N.Y > (Height - 1) || N.Y < 0 ){
+				continue;
+			}
+			UFGNode* Neighbour = NodeGrid.FindChecked(N);
+			if ( ClosedList.Contains(Neighbour) || Neighbour == nullptr || Neighbour->bIsBlocked )
+				continue;
+			Node->Neighbours.Add(Neighbour);
+		}
+
+	}
 
 	return Node->Neighbours;
 }
