@@ -3,6 +3,8 @@
 #include "Components/InputComponent.h"
 #include "GameFramework/PlayerController.h"
 #include "FGAI_2/Grid/FGGridActor.h"
+#include "FGAI_2/Grid/FGPathfindinder.h"
+
 #include "Kismet/GameplayStatics.h"
 
 AFGPlayer::AFGPlayer(){
@@ -23,11 +25,16 @@ void AFGPlayer::BeginPlay(){
 		// just pick the first for now
 		CurrentGridActor = Cast<AFGGridActor>(AllGridActors[0]);
 	}
+	OnAsyncPathCompleteDelegate.AddDynamic(this, &AFGPlayer::HandleAsyncPathComplete);
+	Time = 0;
 }
 
 void AFGPlayer::Tick( float DeltaSeconds ){
 	Super::Tick(DeltaSeconds);
 
+	if ( AStar_Thread != nullptr && !AStar_Thread->bRunning ){
+		HandleAsyncPathComplete();
+	}
 
 	UpdateMovement(DeltaSeconds);
 
@@ -42,6 +49,10 @@ void AFGPlayer::SetupPlayerInputComponent( UInputComponent* PlayerInputComponent
 	PlayerInputComponent->BindAxis(TEXT("Up"), this, &AFGPlayer::Handle_Up);
 
 	PlayerInputComponent->BindAction(TEXT("Confirm"), IE_Pressed, this, &AFGPlayer::Handle_ConfirmedPressed);
+}
+void AFGPlayer::EndPlay( const EEndPlayReason::Type EndPlayReason ){
+	Super::EndPlay(EndPlayReason);
+	OnAsyncPathCompleteDelegate.RemoveDynamic(this, &AFGPlayer::HandleAsyncPathComplete);
 }
 
 
@@ -112,10 +123,37 @@ void AFGPlayer::Handle_ConfirmedPressed(){
 		else{
 			SecondClickLoc = Loc;
 			BP_OnConfirm(true);
+			DurationTimer.Start();
 			CurrentPath = Execute_FindPath(this, CurrentGridActor, FirstClickLoc, SecondClickLoc);
+			DurationTimer.Stop();
+			float fTime = (Time);
+			UE_LOG(LogTemp, Log, TEXT("SYNC COMPLETE IN: %f Seconds"), fTime)
+			AStar_Data = new FAStar_Data{CurrentGridActor, VectorPath, FirstClickLoc, SecondClickLoc};
+			AStar_Thread = new FAStar_Thread{AStar_Data};
+			AStar_Thread->bRunning = true;
+			DurationTimer.Start();
+			FindPathAsync(AStar_Thread);
 			bIsSecondClick = false;
 		}
 
 	};
 
+}
+void AFGPlayer::HandleAsyncPathComplete(){
+	VectorPath.Empty(AStar_Thread->Data->Path.Num());
+	VectorPath.Append(AStar_Thread->Data->Path);
+	FRotator Direction = (SecondClickLoc - FirstClickLoc).Rotation();
+	if ( PathfinderClass != nullptr ){
+		GetWorld()->SpawnActor<AFGPathfindinder>(PathfinderClass, FirstClickLoc, Direction)->Path = VectorPath;
+	}
+	else{
+		GetWorld()->SpawnActor<AFGPathfindinder>(FirstClickLoc, Direction)->Path = VectorPath;
+	}
+	DurationTimer.Stop();
+	float fTime = (Time);
+	UE_LOG(LogTemp, Log, TEXT("ASYNC COMPLETE IN: %f Seconds"), fTime)
+	Time = 0.f;
+	AStar_Thread->Destroy();
+	AStar_Thread = nullptr;
+	AStar_Data = nullptr;
 }

@@ -3,14 +3,49 @@
 
 #include "FGAStar.h"
 
-#include "Kismet/KismetSystemLibrary.h"
+#include "FAStar_Thread.h"
+
+#include "FGAI_2/Player/FGPlayer.h"
+
+#include "Kismet/GameplayStatics.h"
+
+#include "ProfilingDebugging/ScopedTimers.h"
 
 
-
+AActor* InterfaceCaller = nullptr;
 TArray<UFGNode*> IFGAStar::FindPath_Implementation( AFGGridActor* Grid, FVector Start, FVector End ){
 	return GetPath(Grid, Start, End);
 }
+void IFGAStar::OnAsyncPathComplete(){
+
+	// AFGPlayer* player = Cast<AFGPlayer>(InterfaceCaller);
+	// if ( player ){
+	// 	player->OnAsyncPathCompleteDelegate.Broadcast();
+	// }
+	// UE_LOG(LogTemp, Log, TEXT("OnAsyncPathComplete, Caller=%s"), *AActor::GetDebugName(InterfaceCaller));
+	// InterfaceCaller = nullptr;
+
+}
+
+
+void IFGAStar::FindPathAsync( FAStar_Thread* Thread ){
+	FRunnableThread::Create(Thread,TEXT("FAStar_Thread"), 0, TPri_Highest);
+	// if ( Thread->Init() )
+	// 	Thread->Run();
+
+	//	RunnableThread->WaitForCompletion();
+
+}
+TArray<FVector> IFGAStar::GetPathAsync( AFGGridActor* Grid, FVector Start, FVector End ){
+
+	TArray<UFGNode*> Path = GetPath(Grid, Start, End);
+
+	return SmoothPath(Path);
+}
 TArray<UFGNode*> IFGAStar::GetPath( AFGGridActor* Grid, FVector Start, FVector End ){
+	double Time = 0;
+	FDurationTimer DurationTimer = FDurationTimer(Time);
+	DurationTimer.Start();
 	TArray<UFGNode*> Open = {};
 	TArray<UFGNode*> Closed = {};
 
@@ -87,29 +122,19 @@ TArray<UFGNode*> IFGAStar::GetPath( AFGGridActor* Grid, FVector Start, FVector E
 
 		TArray<UFGNode*> Path = RetracePath(StartNode, EndNode);
 		ensure(Path.Num()>0);
-		//TODO Remove Debug
-		float DebugTime = 3.f;
-		UE_LOG(LogTemp, Log, TEXT("CurrentNode is EndNode"))
-		for ( auto& Node : Open ){
-			UKismetSystemLibrary::DrawDebugSphere(Grid, Node->WorldLocation, 50.f, 8, FColor::Green, DebugTime, 4.f);
-			UKismetSystemLibrary::DrawDebugString(Grid, Node->WorldLocation - FVector(0, -(Node->NodeHalfSize * 0.5f), 0), FString().FromInt(Node->GetFCost()), 0, FColor::Green, DebugTime);
-		}
-		for ( auto& Node : Closed ){
-			UKismetSystemLibrary::DrawDebugSphere(Grid, Node->WorldLocation, 50.f, 8, FColor::Orange, DebugTime, 4.f);
-			UKismetSystemLibrary::DrawDebugString(Grid, Node->WorldLocation - FVector(-(Node->NodeHalfSize * 0.5f), 0, 0), FString().FromInt(Node->GetFCost()), 0, FColor::Orange, DebugTime);
-		}
-		for ( auto& PathNode : Path ){
-
-			UKismetSystemLibrary::DrawDebugString(Grid, PathNode->WorldLocation - FVector(-(PathNode->NodeHalfSize * 0.5f), 0, 0), FString().FromInt(PathNode->GetFCost()), 0, FColor::Orange, DebugTime);
-			UKismetSystemLibrary::DrawDebugArrow(Grid, PathNode->WorldLocation, PathNode->Parent->WorldLocation, 5.f, FColor::Purple, DebugTime, 5.f);
-			UKismetSystemLibrary::DrawDebugSphere(Grid, PathNode->WorldLocation, 50.f, 8, FColor::Purple, DebugTime, 4.f);
-		}
-
+	
+		Open.Empty();
+		Closed.Empty();
+		NodeGrid.Empty(Grid->GetNumTiles());
+		DurationTimer.Stop();
+		float fTime=(float)Time;
+		UE_LOG(LogTemp, Log, TEXT("TIMER: %f"), fTime);
 		return Path;
 
 	}
 	return TArray<UFGNode*>();
 }
+
 
 int IFGAStar::GetDistance( const UFGNode* A, const UFGNode* B ){
 	int distX = FMath::Abs(A->X - B->X);
@@ -171,7 +196,7 @@ UFGNode* IFGAStar::GetNodeFromWorldLoc( const FVector& Location, const TMap<FInt
 			return Node.Value;
 		}
 	}
-	UE_LOG(LogTemp, Log, TEXT("LOCATION HAS NO MATCHIN NODE"));
+	// UE_LOG(LogTemp, Log, TEXT("LOCATION HAS NO MATCHIN NODE"));
 	return nullptr;
 }
 TArray<UFGNode*> IFGAStar::RetracePath( UFGNode* StartNode, UFGNode* EndNode ){
@@ -184,4 +209,21 @@ TArray<UFGNode*> IFGAStar::RetracePath( UFGNode* StartNode, UFGNode* EndNode ){
 	}
 	Algo::Reverse(Path);
 	return Path;
+}
+TArray<FVector> IFGAStar::SmoothPath( TArray<UFGNode*> NodePath ){
+	TArray<FVector> OutPath;
+
+	for ( auto& node : NodePath ){
+		OutPath.Add(node->WorldLocation);
+
+	}
+	// int l = OutPath.Num();
+	// for ( int i = 0; i < l - 1; ++i ){
+	// 	float stepDistance = GetDistance(NodePath[i], NodePath[i + 1]);
+	// 	FVector SmoothStep = FMath::Lerp(OutPath[i],
+	// 	                                 OutPath[i + 1],
+	// 	                                 stepDistance / 2);
+	// 	OutPath.EmplaceAt(i + 1, SmoothStep);
+	// }
+	return OutPath;
 }

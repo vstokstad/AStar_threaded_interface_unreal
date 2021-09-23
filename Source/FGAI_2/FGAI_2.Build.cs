@@ -8,7 +8,7 @@ public class FGAI_2 : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 	
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "MeshDescription", "StaticMeshDescription", "RenderCore", "RHI" });
+		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "MeshDescription", "StaticMeshDescription", "RenderCore", "RHI", "AITestSuite" });
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });
 
