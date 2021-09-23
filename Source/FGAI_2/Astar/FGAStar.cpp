@@ -88,7 +88,7 @@ TArray<UFGNode*> IFGAStar::GetPath( AFGGridActor* Grid, FVector Start, FVector E
 		TArray<UFGNode*> Path = RetracePath(StartNode, EndNode);
 		ensure(Path.Num()>0);
 		//TODO Remove Debug
-		float DebugTime = 4.f;
+		float DebugTime = 3.f;
 		UE_LOG(LogTemp, Log, TEXT("CurrentNode is EndNode"))
 		for ( auto& Node : Open ){
 			UKismetSystemLibrary::DrawDebugSphere(Grid, Node->WorldLocation, 50.f, 8, FColor::Green, DebugTime, 4.f);
@@ -100,6 +100,7 @@ TArray<UFGNode*> IFGAStar::GetPath( AFGGridActor* Grid, FVector Start, FVector E
 		}
 		for ( auto& PathNode : Path ){
 
+			UKismetSystemLibrary::DrawDebugString(Grid, PathNode->WorldLocation - FVector(-(PathNode->NodeHalfSize * 0.5f), 0, 0), FString().FromInt(PathNode->GetFCost()), 0, FColor::Orange, DebugTime);
 			UKismetSystemLibrary::DrawDebugArrow(Grid, PathNode->WorldLocation, PathNode->Parent->WorldLocation, 5.f, FColor::Purple, DebugTime, 5.f);
 			UKismetSystemLibrary::DrawDebugSphere(Grid, PathNode->WorldLocation, 50.f, 8, FColor::Purple, DebugTime, 4.f);
 		}
@@ -129,26 +130,19 @@ void IFGAStar::InitNodeGrid( AFGGridActor* Grid, TMap<FIntPoint, UFGNode*>& Node
 			Node->bIsBlocked = Grid->TileList[index].bBlock;
 			Node->WorldLocation = Grid->GetWorldLocationFromXY(x, y);
 			NodeGrid.Add(FIntPoint(x, y), Node);
-			//TODO Remove Debug stuff;
-			FString string = FString("X:");
-			string.AppendInt(x);
-			string.Append(" Y:").AppendInt(y);
-			UKismetSystemLibrary::DrawDebugString(Grid, Node->WorldLocation, string, 0, FLinearColor::Black, 1.f);
 		}
 	}
 }
 TArray<UFGNode*> IFGAStar::GetNeighbours( UFGNode* Node, const TMap<FIntPoint, UFGNode*>& NodeGrid, int Height, int Width, const TArray<UFGNode*>& ClosedList ){
-	FIntPoint Directions[] = {{0, 1}, {0, -1}, {1, 0}, {-1, 0}};
-	FIntPoint Diagonals[] = {{1, 1}, {-1, -1}, {1, -1}, {-1, 1}};
+	FIntPoint Directions[] = {{1, 0}, {0, 1}, {0, -1}, {-1, 0}};
+	FIntPoint Diagonals[] = {{1, 1}, {1, -1}, {-1, -1}, {-1, 1}};
 	FIntPoint Current = {Node->X, Node->Y};
 	FIntPoint N = Current;
-	bool Found[4];
+	bool Found[4] = {false, false, false, false};
 	for ( int i = 0; i < 4; i++ ){
 		N = Current + Directions[i];
-		if ( N.X > (Width - 1) || N.X < 0 || N.Y > (Height - 1) || N.Y < 0 ){
+		if ( N.X > (Width - 1) || N.X < 0 || N.Y > (Height - 1) || N.Y < 0 )
 			continue;
-		}
-
 		UFGNode* Neighbour = NodeGrid.FindChecked(N);
 		if ( ClosedList.Contains(Neighbour) || Neighbour == nullptr || Neighbour->bIsBlocked )
 			continue;
@@ -157,11 +151,10 @@ TArray<UFGNode*> IFGAStar::GetNeighbours( UFGNode* Node, const TMap<FIntPoint, U
 	}
 	for ( int i = 0; i < 4; i++ ){
 		int j = (i + 1) % 4;
-		if ( Found[i] || Found[j] ){
+		if ( Found[j] || Found[i] ){
 			N = Current + Diagonals[i];
-			if ( N.X > (Width - 1) || N.X < 0 || N.Y > (Height - 1) || N.Y < 0 ){
+			if ( N.X > (Width - 1) || N.X < 0 || N.Y > (Height - 1) || N.Y < 0 )
 				continue;
-			}
 			UFGNode* Neighbour = NodeGrid.FindChecked(N);
 			if ( ClosedList.Contains(Neighbour) || Neighbour == nullptr || Neighbour->bIsBlocked )
 				continue;
@@ -169,7 +162,6 @@ TArray<UFGNode*> IFGAStar::GetNeighbours( UFGNode* Node, const TMap<FIntPoint, U
 		}
 
 	}
-
 	return Node->Neighbours;
 }
 UFGNode* IFGAStar::GetNodeFromWorldLoc( const FVector& Location, const TMap<FIntPoint, UFGNode*>& NodeGrid ){
