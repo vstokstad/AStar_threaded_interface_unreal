@@ -11,14 +11,14 @@
 #include "ProfilingDebugging/ScopedTimers.h"
 
 #include "FGPlayer.generated.h"
-
+struct FVectorCurve;
 class FDurationTimer;
 class AFGPathfindinder;
 struct FFGTileinfo;
 class UCameraComponent;
 class AFGGridActor;
 struct FAStar_Data;
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FFindPathAsyncDelegate);
+
 UCLASS()
 class AFGPlayer : public APawn, public IFGAStar {
 	GENERATED_BODY()
@@ -45,10 +45,16 @@ public:
 	float VerticalMovementSpeed = 5000.0f;
 	//ASTAR STUFF BY VILHELM
 	bool bMoveAlongPath;
+	/**
+	 * @brief The NodePath returned as a vectorPath (used in the threaded version;
+	 */
 	UPROPERTY()
 	TArray<FVector> VectorPath;
+	/**
+	 * @brief The travel path recieved from the sync version;
+	 */
 	UPROPERTY()
-	TArray<UFGNode*> CurrentPath;
+	TArray<UFGNode*> NodePath;
 	UPROPERTY()
 	FVector FirstClickLoc;
 	UPROPERTY()
@@ -56,13 +62,15 @@ public:
 	bool bIsSecondClick = false;
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 	TSubclassOf<AFGPathfindinder> PathfinderClass;
-	//AStarAsync
-	FFindPathAsyncDelegate OnAsyncPathCompleteDelegate;
+
+	//AStar Threaded
 	FAStar_Data* AStar_Data;
 	FAStar_Thread* AStar_Thread;
+	/**
+	 * @brief Timer for profiling;
+	 */
 	double Time = 0;
 	FDurationTimer DurationTimer = FDurationTimer(Time);
-
 
 	/*
 	* Callback for whenever the user presses "Confirm" aka the left mouse button

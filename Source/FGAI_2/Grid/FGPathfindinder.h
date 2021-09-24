@@ -5,9 +5,12 @@
 #include "CoreMinimal.h"
 
 #include "GameFramework/Actor.h"
+
 #include "FGPathfindinder.generated.h"
 
 class UDrawSphereComponent;
+
+
 UCLASS()
 class FGAI_2_API AFGPathfindinder : public AActor {
 	GENERATED_BODY()
@@ -32,8 +35,13 @@ public:
 	FVector NextStep = FVector::ZeroVector;
 	UPROPERTY(VisibleAnywhere)
 	FVector TargetLoc = FVector::ZeroVector;
+	UPROPERTY(VisibleAnywhere)
+	FVector Velocity = FVector::ZeroVector;
 	UPROPERTY(EditAnywhere)
 	float Tolerance = 250.f;
 	UPROPERTY(EditAnywhere)
 	float MoveSpeed = 1.f;
+	FRichCurve XCurve;
+	FRichCurve YCurve;
+	float TravelTime;
 };

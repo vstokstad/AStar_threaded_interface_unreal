@@ -5,6 +5,8 @@
 #include "CoreMinimal.h"
 #include "FGAStar.h"
 
+#include "ProfilingDebugging/ScopedTimers.h"
+
 /**
  * 
  */
@@ -24,26 +26,28 @@ struct FAStar_Thread : public FRunnable, public IFGAStar {
 		Data = InData;
 	}
 	FAStar_Data* Data;
-
+	double Time = 0;
+	FDurationTimer Timer = FDurationTimer(Time);
 	bool bRunning = false;
 
 	virtual bool Init() override{
-		if ( Data != nullptr){
+		if ( Data != nullptr ){
 			return true;
 		}
 		return false;
 	}
 
 	virtual uint32 Run() override{
+		Timer.Start();
 		bRunning = true;
 		Data->Path = GetPathAsync(Data->GridActor, Data->Start, Data->End);
-		if ( Data->Path.Num() > 0 ){
-			Exit();
-		}
 		return 0;
 	}
 	virtual void Exit() override{
 		ensure(Data->Path.Num()>0);
+		Timer.Stop();
+		const float fTime = static_cast<float>(Time);
+		UE_LOG(LogTemp, Log, TEXT("InsideAsyncTime:%f"), fTime)
 		bRunning = false;
 	}
 	virtual void Stop() override{

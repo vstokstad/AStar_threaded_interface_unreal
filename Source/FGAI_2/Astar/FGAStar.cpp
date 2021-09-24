@@ -7,6 +7,8 @@
 
 #include "FGAI_2/Player/FGPlayer.h"
 
+#include "GameFramework/GameSession.h"
+
 #include "Kismet/GameplayStatics.h"
 
 #include "ProfilingDebugging/ScopedTimers.h"
@@ -29,7 +31,7 @@ void IFGAStar::OnAsyncPathComplete(){
 
 
 void IFGAStar::FindPathAsync( FAStar_Thread* Thread ){
-	FRunnableThread::Create(Thread,TEXT("FAStar_Thread"), 0, TPri_Highest);
+	FRunnableThread::Create(Thread,TEXT("FAStar_Thread"), 0, TPri_Lowest);
 	// if ( Thread->Init() )
 	// 	Thread->Run();
 
@@ -122,13 +124,16 @@ TArray<UFGNode*> IFGAStar::GetPath( AFGGridActor* Grid, FVector Start, FVector E
 
 		TArray<UFGNode*> Path = RetracePath(StartNode, EndNode);
 		ensure(Path.Num()>0);
-	
+
 		Open.Empty();
 		Closed.Empty();
 		NodeGrid.Empty(Grid->GetNumTiles());
 		DurationTimer.Stop();
-		float fTime=(float)Time;
-		UE_LOG(LogTemp, Log, TEXT("TIMER: %f"), fTime);
+		const float fTime = static_cast<float>(Time);
+		UE_LOG(LogTemp, Log, TEXT("Algo: %f"), fTime);
+		for ( auto Node : Path ){
+			UKismetSystemLibrary::DrawDebugLine(Grid, Node->WorldLocation, Node->Parent->WorldLocation, FLinearColor::Green, 2.f, 5.f);
+		}
 		return Path;
 
 	}
@@ -176,13 +181,14 @@ TArray<UFGNode*> IFGAStar::GetNeighbours( UFGNode* Node, const TMap<FIntPoint, U
 	}
 	for ( int i = 0; i < 4; i++ ){
 		int j = (i + 1) % 4;
-		if ( Found[j] || Found[i] ){
+		if ( Found[j] && Found[i] ){
 			N = Current + Diagonals[i];
 			if ( N.X > (Width - 1) || N.X < 0 || N.Y > (Height - 1) || N.Y < 0 )
 				continue;
 			UFGNode* Neighbour = NodeGrid.FindChecked(N);
 			if ( ClosedList.Contains(Neighbour) || Neighbour == nullptr || Neighbour->bIsBlocked )
 				continue;
+
 			Node->Neighbours.Add(Neighbour);
 		}
 
@@ -196,7 +202,6 @@ UFGNode* IFGAStar::GetNodeFromWorldLoc( const FVector& Location, const TMap<FInt
 			return Node.Value;
 		}
 	}
-	// UE_LOG(LogTemp, Log, TEXT("LOCATION HAS NO MATCHIN NODE"));
 	return nullptr;
 }
 TArray<UFGNode*> IFGAStar::RetracePath( UFGNode* StartNode, UFGNode* EndNode ){
@@ -207,16 +212,34 @@ TArray<UFGNode*> IFGAStar::RetracePath( UFGNode* StartNode, UFGNode* EndNode ){
 		ensure(CurrentNode->Parent!=nullptr);
 		CurrentNode = CurrentNode->Parent;
 	}
+	Path.Add(CurrentNode);
 	Algo::Reverse(Path);
 	return Path;
 }
 TArray<FVector> IFGAStar::SmoothPath( TArray<UFGNode*> NodePath ){
 	TArray<FVector> OutPath;
 
+	FVector LastLocation;
+	FVector NextLocation;
+	FVector CombinedLocation;
+	FVector Velocity;
+	bool bFirstPass = true;
 	for ( auto& node : NodePath ){
-		OutPath.Add(node->WorldLocation);
+		if ( bFirstPass ){
+			NextLocation = NodePath[0]->WorldLocation;
+			Velocity += FVector(1.f);
+			bFirstPass = false;
+
+		}
+		LastLocation = NextLocation;
+		NextLocation = node->WorldLocation;
+		Velocity += FVector(2.f,2.f, 0.f);
+		FVector temp = FMath::InterpSinInOut(LastLocation, NextLocation, 0.4f);
+		CombinedLocation = temp + Velocity / NodePath.Num();
+		OutPath.Add(CombinedLocation);
 
 	}
+
 	// int l = OutPath.Num();
 	// for ( int i = 0; i < l - 1; ++i ){
 	// 	float stepDistance = GetDistance(NodePath[i], NodePath[i + 1]);

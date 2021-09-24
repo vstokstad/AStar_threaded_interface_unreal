@@ -4,7 +4,8 @@
 #include "GameFramework/PlayerController.h"
 #include "FGAI_2/Grid/FGGridActor.h"
 #include "FGAI_2/Grid/FGPathfindinder.h"
-
+#include "Curves/CurveVector.h"
+#include "Animation/AnimCurveTypes.h"
 #include "Kismet/GameplayStatics.h"
 
 AFGPlayer::AFGPlayer(){
@@ -12,7 +13,7 @@ AFGPlayer::AFGPlayer(){
 
 	CameraComponent = CreateDefaultSubobject<UCameraComponent>(TEXT("CameraComponent"));
 	CameraComponent->SetupAttachment(RootComponent);
-	//	PathFinderComp = CreateDefaultSubobject<UFGPathFindingComponent>(TEXT("PathFindingComp"));
+
 }
 
 void AFGPlayer::BeginPlay(){
@@ -25,7 +26,6 @@ void AFGPlayer::BeginPlay(){
 		// just pick the first for now
 		CurrentGridActor = Cast<AFGGridActor>(AllGridActors[0]);
 	}
-	OnAsyncPathCompleteDelegate.AddDynamic(this, &AFGPlayer::HandleAsyncPathComplete);
 	Time = 0;
 }
 
@@ -52,7 +52,7 @@ void AFGPlayer::SetupPlayerInputComponent( UInputComponent* PlayerInputComponent
 }
 void AFGPlayer::EndPlay( const EEndPlayReason::Type EndPlayReason ){
 	Super::EndPlay(EndPlayReason);
-	OnAsyncPathCompleteDelegate.RemoveDynamic(this, &AFGPlayer::HandleAsyncPathComplete);
+
 }
 
 
@@ -124,10 +124,10 @@ void AFGPlayer::Handle_ConfirmedPressed(){
 			SecondClickLoc = Loc;
 			BP_OnConfirm(true);
 			DurationTimer.Start();
-			CurrentPath = Execute_FindPath(this, CurrentGridActor, FirstClickLoc, SecondClickLoc);
+			NodePath = Execute_FindPath(this, CurrentGridActor, FirstClickLoc, SecondClickLoc);
 			DurationTimer.Stop();
 			float fTime = (Time);
-			UE_LOG(LogTemp, Log, TEXT("SYNC COMPLETE IN: %f Seconds"), fTime)
+			UE_LOG(LogTemp, Log, TEXT("SYNC: %f Seconds"), fTime)
 			AStar_Data = new FAStar_Data{CurrentGridActor, VectorPath, FirstClickLoc, SecondClickLoc};
 			AStar_Thread = new FAStar_Thread{AStar_Data};
 			AStar_Thread->bRunning = true;
@@ -142,6 +142,9 @@ void AFGPlayer::Handle_ConfirmedPressed(){
 void AFGPlayer::HandleAsyncPathComplete(){
 	VectorPath.Empty(AStar_Thread->Data->Path.Num());
 	VectorPath.Append(AStar_Thread->Data->Path);
+	DurationTimer.Stop();
+	float fTime = static_cast<float>(Time);
+	UE_LOG(LogTemp, Log, TEXT("ASYNC: %f Seconds"), fTime)
 	FRotator Direction = (SecondClickLoc - FirstClickLoc).Rotation();
 	if ( PathfinderClass != nullptr ){
 		GetWorld()->SpawnActor<AFGPathfindinder>(PathfinderClass, FirstClickLoc, Direction)->Path = VectorPath;
@@ -149,9 +152,14 @@ void AFGPlayer::HandleAsyncPathComplete(){
 	else{
 		GetWorld()->SpawnActor<AFGPathfindinder>(FirstClickLoc, Direction)->Path = VectorPath;
 	}
-	DurationTimer.Stop();
-	float fTime = (Time);
-	UE_LOG(LogTemp, Log, TEXT("ASYNC COMPLETE IN: %f Seconds"), fTime)
+	//TODO Remove debuggerSpheres;
+	for ( int i = 0; i < VectorPath.Num(); ++i ){
+		UKismetSystemLibrary::DrawDebugSphere(this, VectorPath[i], 50.f, 8, FLinearColor::Blue, 2.f, 5.f);
+	
+
+	}
+	NodePath.Empty();
+	VectorPath.Empty();
 	Time = 0.f;
 	AStar_Thread->Destroy();
 	AStar_Thread = nullptr;
