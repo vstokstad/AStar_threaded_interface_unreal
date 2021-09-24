@@ -35,11 +35,11 @@ void AFGPathfindinder::Tick( float DeltaTime ){
 
 		NextStep = FVector(XCurve.Eval(TravelTime), YCurve.Eval(TravelTime), 10.f);
 
-		Velocity += FVector(1.f, 1.f, 0.f) * DeltaTime;
-		FVector NewLocation = FMath::Lerp(GetActorLocation(), NextStep, DeltaTime);
-		FVector DeltaLocation = (NewLocation + Velocity * DeltaTime);
+		Velocity += NextStep.GetSafeNormal() * DeltaTime;
+		FVector NewLocation = FMath::Lerp(GetActorLocation(), NextStep, MoveSpeed * DeltaTime);
+		FVector DeltaLocation = NewLocation + Velocity * DeltaTime;
 		SetActorLocation(DeltaLocation);
-		UKismetSystemLibrary::DrawDebugLine(this,NextStep, DeltaLocation, FColor::Purple, TravelTime-Velocity.Size(), 10.f);
+		UKismetSystemLibrary::DrawDebugLine(this, NextStep, DeltaLocation, FColor::Purple, TravelTime - Velocity.Size(), 10.f);
 		TravelTime += (MoveSpeed * DeltaTime);
 
 	}

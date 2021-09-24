@@ -223,30 +223,23 @@ TArray<FVector> IFGAStar::SmoothPath( TArray<UFGNode*> NodePath ){
 	FVector NextLocation;
 	FVector CombinedLocation;
 	FVector Velocity;
+	float t = 0.1f;
 	bool bFirstPass = true;
 	for ( auto& node : NodePath ){
 		if ( bFirstPass ){
 			NextLocation = NodePath[0]->WorldLocation;
-			Velocity += FVector(1.f);
+			Velocity = FVector(1.f);
 			bFirstPass = false;
 
 		}
 		LastLocation = NextLocation;
+		LastLocation+=Velocity;
 		NextLocation = node->WorldLocation;
-		Velocity += FVector(2.f,2.f, 0.f);
-		FVector temp = FMath::InterpSinInOut(LastLocation, NextLocation, 0.4f);
+		Velocity += FVector(t, t, 0.f);
+		FVector temp = FMath::InterpCircularOut(LastLocation, NextLocation,t);
 		CombinedLocation = temp + Velocity / NodePath.Num();
 		OutPath.Add(CombinedLocation);
 
 	}
-
-	// int l = OutPath.Num();
-	// for ( int i = 0; i < l - 1; ++i ){
-	// 	float stepDistance = GetDistance(NodePath[i], NodePath[i + 1]);
-	// 	FVector SmoothStep = FMath::Lerp(OutPath[i],
-	// 	                                 OutPath[i + 1],
-	// 	                                 stepDistance / 2);
-	// 	OutPath.EmplaceAt(i + 1, SmoothStep);
-	// }
 	return OutPath;
 }
