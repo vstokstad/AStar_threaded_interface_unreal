@@ -4,10 +4,12 @@
 /shelf/
 /workspace.xml
 # Rider ignored files
+.idea/
 /projectSettingsUpdater.xml
 /contentModel.xml
 /modules.xml
 /.idea.FGAI_2.iml
+
 # Datasource local storage ignored files
 /dataSources/
 /dataSources.local.xml
